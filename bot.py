@@ -70,6 +70,20 @@ async def view_trades_handler(update: Update, context: CallbackContext):
         # После того, как журнал пуст, предложим добавить сделку
         await update.message.reply_text("Нажмите 'Добавить сделку', чтобы добавить новую сделку.")
 
+# Функция для обработки текста (handle_message)
+async def handle_message(update: Update, context: CallbackContext):
+    text = update.message.text
+    if text == "Журнал сделок":
+        await update.message.reply_text("Введите информацию по сделке: Инструмент, Вход, Выход и т.д.")
+    elif text == "Добавить сделку":
+        await add_trade_handler(update, context)
+    elif text == "Удалить все сделки":
+        await delete_all_trades_handler(update, context)
+    elif text == "Удалить сделку по ID":
+        await delete_trade_handler(update, context)
+    else:
+        await update.message.reply_text("Выберите одну из предложенных опций.")
+
 # Основная функция для запуска бота
 def main():
     application = Application.builder().token("7398609388:AAHpGPlqH1qW4Hx3SsdyYDtqT0PS7EXy-zs").build()
