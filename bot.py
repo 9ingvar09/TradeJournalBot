@@ -1,7 +1,7 @@
 import logging
 from telegram import Update
 from telegram.ext import Updater, CommandHandler, CallbackContext, MessageHandler
-from telegram.ext.filters import Filters
+from telegram.ext import filters
 import os
 from dotenv import load_dotenv
 
