@@ -1,3 +1,20 @@
+import sqlite3
+
+# Создаем подключение к базе данных (будет создан файл trading_bot.db)
+conn = sqlite3.connect('trading_bot.db')
+cursor = conn.cursor()
+
+# Создаем таблицу, если она не существует
+cursor.execute('''CREATE TABLE IF NOT EXISTS trades (
+                    id INTEGER PRIMARY KEY,
+                    date TEXT,
+                    trading_pair TEXT,
+                    account TEXT,
+                    rr REAL,
+                    risk REAL,
+                    result TEXT)''')
+conn.commit()
+
 import logging
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
