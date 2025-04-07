@@ -15,6 +15,27 @@ cursor.execute('''CREATE TABLE IF NOT EXISTS trades (
                     result TEXT)''')
 conn.commit()
 
+# Функция для добавления сделки в базу данных
+def add_trade(date, trading_pair, account, rr, risk, result):
+    cursor.execute("INSERT INTO trades (date, trading_pair, account, rr, risk, result) VALUES (?, ?, ?, ?, ?, ?)", 
+                   (date, trading_pair, account, rr, risk, result))
+    conn.commit()
+
+# Функция для удаления всех сделок
+def delete_all_trades():
+    cursor.execute("DELETE FROM trades")
+    conn.commit()
+
+# Функция для удаления сделки по ID
+def delete_trade_by_id(trade_id):
+    cursor.execute("DELETE FROM trades WHERE id = ?", (trade_id,))
+    conn.commit()
+
+# Функция для получения всех сделок
+def get_all_trades():
+    cursor.execute("SELECT * FROM trades")
+    return cursor.fetchall()  # Возвращает список всех сделок
+
 import logging
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
