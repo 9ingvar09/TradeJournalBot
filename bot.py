@@ -36,6 +36,18 @@ def get_all_trades():
     cursor.execute("SELECT * FROM trades")
     return cursor.fetchall()  # Возвращает список всех сделок
 
+from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
+
+# Функция для обработки команды /start
+async def start(update: Update, context: CallbackContext):
+    keyboard = [
+        [KeyboardButton("Добавить сделку"), KeyboardButton("Журнал сделок")],
+        [KeyboardButton("Удалить все сделки"), KeyboardButton("Удалить сделку по ID")]
+    ]
+    reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+    await update.message.reply_text("Привет! Я твой трейдинг-бот. Выберите опцию:", reply_markup=reply_markup)
+
 import logging
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
