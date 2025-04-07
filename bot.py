@@ -46,7 +46,7 @@ async def start(update: Update, context: CallbackContext):
 
 # Функция для добавления сделки
 async def add_trade_handler(update: Update, context: CallbackContext):
-    await update.message.reply_text("Введите данные сделки в формате: \nДата, Пара, Аккаунт, RR, Риск на сделку, Итог сделки")
+    await update.message.reply_text("Введите данные сделки в формате: \nДата, Пара, Аккаунт, RR, Риск на сделку, Итог сделки\nПример: 2025-04-08, BTC/USD, 1000, 2.5, 1.5, Win")
 
 # Функция для удаления всех сделок
 async def delete_all_trades_handler(update: Update, context: CallbackContext):
@@ -61,34 +61,35 @@ async def delete_trade_handler(update: Update, context: CallbackContext):
 async def view_trades_handler(update: Update, context: CallbackContext):
     trades = get_all_trades()
     if trades:
-        message = "Журнал сделок:\n\n"
         for trade in trades:
-            message += f"ID: {trade[0]}\nДата: {trade[1]}\nПара: {trade[2]}\nАккаунт: {trade[3]}\nRR: {trade[4]}\nРиск: {trade[5]}\nРезультат: {trade[6]}\n\n"
-        await update.message.reply_text(message)
+            await update.message.reply_text(f"ID: {trade[0]}\nДата: {trade[1]}\nПара: {trade[2]}\nАккаунт: {trade[3]}\nRR: {trade[4]}\nРиск: {trade[5]}\nРезультат: {trade[6]}")
     else:
         await update.message.reply_text("Журнал сделок пуст.")
 
-# Функция для обработки сообщений пользователя (ввод сделок)
+# Функция для обработки текста (добавление сделки)
 async def handle_message(update: Update, context: CallbackContext):
     text = update.message.text
-    # Обрабатываем ввод данных о сделке
-    if ',' in text:  # Если есть запятая, значит, пользователь ввел данные
-        try:
-            date, trading_pair, account, rr, risk, result = map(str.strip, text.split(','))
-            rr = float(rr)
-            risk = float(risk)
-            # Сохраняем сделку в базу данных
-            add_trade(date, trading_pair, account, rr, risk, result)
-            await update.message.reply_text("Сделка добавлена!")
-        except Exception as e:
-            await update.message.reply_text(f"Ошибка при добавлении сделки: {e}. Пожалуйста, используйте формат: \nДата, Пара, Аккаунт, RR, Риск, Результат")
+    if text == "Журнал сделок":
+        trades = get_all_trades()
+        if trades:
+            for trade in trades:
+                await update.message.reply_text(f"ID: {trade[0]}\nДата: {trade[1]}\nПара: {trade[2]}\nАккаунт: {trade[3]}\nRR: {trade[4]}\nРиск: {trade[5]}\nРезультат: {trade[6]}")
+        else:
+            await update.message.reply_text("Журнал сделок пуст.")
     else:
-        await update.message.reply_text("Неверный формат. Используйте: Дата, Пара, Аккаунт, RR, Риск, Результат")
+        try:
+            date, trading_pair, account, rr, risk, result = text.split(", ")
+            add_trade(date, trading_pair, account, float(rr), float(risk), result)
+            await update.message.reply_text("Сделка добавлена!")
+        except ValueError:
+            await update.message.reply_text("Неверный формат. Используйте: Дата, Пара, Аккаунт, RR, Риск, Результат. Пример: 2025-04-08, BTC/USD, 1000, 2.5, 1.5, Win")
 
 # Основная функция для запуска бота
 def main():
+    # Создаем объект приложения
     application = Application.builder().token("7398609388:AAHpGPlqH1qW4Hx3SsdyYDtqT0PS7EXy-zs").build()
 
+    # Обработчики команд и сообщений
     application.add_handler(CommandHandler("start", start))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     application.add_handler(MessageHandler(filters.Regex('^Добавить сделку$'), add_trade_handler))
@@ -96,6 +97,7 @@ def main():
     application.add_handler(MessageHandler(filters.Regex('^Удалить все сделки$'), delete_all_trades_handler))
     application.add_handler(MessageHandler(filters.Regex('^Удалить сделку по ID$'), delete_trade_handler))
 
+    # Запуск бота
     application.run_polling()
 
 if __name__ == '__main__':
