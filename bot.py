@@ -1,110 +1,141 @@
-import json
-from telegram import ReplyKeyboardMarkup, KeyboardButton
-from telegram.ext import Updater, CommandHandler, MessageHandler, filters, ConversationHandler
+import sqlite3
+from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
 
-# Функции для работы с базой данных (аккаунты)
-def load_accounts():
-    try:
-        with open("accounts.json", "r") as f:
-            return json.load(f)
-    except FileNotFoundError:
-        return {}
+# Создаем или открываем базу данных
+def create_db():
+    conn = sqlite3.connect('trading_bot.db')
+    cursor = conn.cursor()
+    # Создание таблиц для аккаунтов и статистики
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS accounts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            account_id TEXT NOT NULL,
+            account_name TEXT NOT NULL
+        )
+    ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS statistics (
+            account_id TEXT NOT NULL,
+            profit REAL,
+            rr REAL,
+            trades INTEGER,
+            pairs INTEGER,
+            PRIMARY KEY (account_id)
+        )
+    ''')
+    conn.commit()
+    conn.close()
 
-def save_accounts(accounts):
-    with open("accounts.json", "w") as f:
-        json.dump(accounts, f)
+# Функция для добавления аккаунта в базу данных
+def add_account_to_db(account_id: str, account_name: str):
+    conn = sqlite3.connect('trading_bot.db')
+    cursor = conn.cursor()
+    cursor.execute('''
+        INSERT INTO accounts (account_id, account_name) VALUES (?, ?)
+    ''', (account_id, account_name))
+    conn.commit()
+    conn.close()
 
-def add_account(account_id, account_name):
-    accounts = load_accounts()
-    accounts[account_id] = {"name": account_name, "balance": 1000, "trades": 0, "pairs": []}
-    save_accounts(accounts)
+# Функция для удаления аккаунта из базы данных
+def delete_account_from_db(account_id: str):
+    conn = sqlite3.connect('trading_bot.db')
+    cursor = conn.cursor()
+    cursor.execute('''
+        DELETE FROM accounts WHERE account_id = ?
+    ''', (account_id,))
+    conn.commit()
+    conn.close()
 
-def delete_account(account_id):
-    accounts = load_accounts()
-    if account_id in accounts:
-        del accounts[account_id]
-        save_accounts(accounts)
+# Функция для получения всех аккаунтов
+def get_all_accounts():
+    conn = sqlite3.connect('trading_bot.db')
+    cursor = conn.cursor()
+    cursor.execute('SELECT account_id, account_name FROM accounts')
+    accounts = cursor.fetchall()
+    conn.close()
+    return accounts
 
-# Начальная функция, которая запускает бота
-def start(update, context):
+# Функция для получения статистики аккаунта
+def get_account_statistics(account_id: str):
+    conn = sqlite3.connect('trading_bot.db')
+    cursor = conn.cursor()
+    cursor.execute('SELECT profit, rr, trades, pairs FROM statistics WHERE account_id = ?', (account_id,))
+    stats = cursor.fetchone()
+    conn.close()
+    return stats
+
+# Функция для команды /start
+def start(update: Update, context: CallbackContext):
     keyboard = [
-        [KeyboardButton("Менеджмент аккаунтов"), KeyboardButton("Статистика аккаунтов")]
+        [KeyboardButton("Менеджмент аккаунтов"), KeyboardButton("Статистика")]
     ]
-    reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True)
-    update.message.reply_text("Привет! Выберите опцию:", reply_markup=reply_markup)
+    reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+    update.message.reply_text('Привет! Я ваш трейдер-бот! Выберите действие:', reply_markup=reply_markup)
 
-# Обработчик для кнопки "Менеджмент аккаунтов"
-def manage_accounts(update, context):
+# Функция для обработки команды "Менеджмент аккаунтов"
+def manage_accounts(update: Update, context: CallbackContext):
     keyboard = [
-        [KeyboardButton("Добавить аккаунт"), KeyboardButton("Удалить аккаунт")],
-        [KeyboardButton("Назад")]
+        [KeyboardButton("Добавить аккаунт"), KeyboardButton("Удалить аккаунт")]
     ]
-    reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True)
-    update.message.reply_text("Выберите опцию для управления аккаунтами:", reply_markup=reply_markup)
+    reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+    update.message.reply_text('Вы выбрали менеджмент аккаунтов. Доступные действия:', reply_markup=reply_markup)
 
-# Обработчик для кнопки "Добавить аккаунт"
-def add_account_command(update, context):
-    update.message.reply_text("Введите ID аккаунта:")
-    return "WAITING_FOR_ACCOUNT_ID"
+# Функция для обработки команды "Статистика"
+def statistics(update: Update, context: CallbackContext):
+    keyboard = [
+        [KeyboardButton("График доходности"), KeyboardButton("RR")],
+        [KeyboardButton("Количество сделок"), KeyboardButton("Пары")]
+    ]
+    reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+    update.message.reply_text('Вы выбрали статистику. Доступные данные:', reply_markup=reply_markup)
 
-# Обработчик для получения ID аккаунта и добавления
-def handle_account_id(update, context):
-    account_id = update.message.text
-    context.user_data['account_id'] = account_id
-    update.message.reply_text("Введите название аккаунта:")
-    return "WAITING_FOR_ACCOUNT_NAME"
+# Функция для добавления аккаунта
+def add_account(update: Update, context: CallbackContext):
+    # Пример: Ввод данных аккаунта
+    account_id = "12345"  # Это должно быть введено пользователем
+    account_name = "Test Account"  # Это тоже введет пользователь
+    add_account_to_db(account_id, account_name)
+    update.message.reply_text(f"Аккаунт {account_name} добавлен!")
 
-# Обработчик для получения имени аккаунта и добавления
-def handle_account_name(update, context):
-    account_name = update.message.text
-    account_id = context.user_data['account_id']
-    add_account(account_id, account_name)
-    update.message.reply_text(f"Аккаунт {account_name} с ID {account_id} добавлен.")
-    return ConversationHandler.END
+# Функция для удаления аккаунта
+def delete_account(update: Update, context: CallbackContext):
+    account_id = "12345"  # Здесь пользователь введет ID аккаунта для удаления
+    delete_account_from_db(account_id)
+    update.message.reply_text(f"Аккаунт с ID {account_id} удален!")
 
-# Обработчик для кнопки "Удалить аккаунт"
-def delete_account_command(update, context):
-    update.message.reply_text("Введите ID аккаунта для удаления:")
-    return "WAITING_FOR_ACCOUNT_ID_TO_DELETE"
-
-# Обработчик для удаления аккаунта
-def handle_account_delete(update, context):
-    account_id = update.message.text
-    delete_account(account_id)
-    update.message.reply_text(f"Аккаунт с ID {account_id} удален.")
-    return ConversationHandler.END
-
-# Обработчик для статистики
-def show_statistics(update, context):
-    accounts = load_accounts()
-    statistics_text = "Статистика по аккаунтам:\n"
-    for account_id, account_info in accounts.items():
-        statistics_text += f"\nАккаунт ID: {account_id}, Название: {account_info['name']}, Баланс: {account_info['balance']}, Количество сделок: {account_info['trades']}, Пары: {len(account_info['pairs'])}"
-    update.message.reply_text(statistics_text)
+# Функция для отображения статистики
+def display_statistics(update: Update, context: CallbackContext):
+    account_id = "12345"  # Здесь пользователь может ввести ID аккаунта
+    stats = get_account_statistics(account_id)
+    if stats:
+        profit, rr, trades, pairs = stats
+        update.message.reply_text(f"Статистика для аккаунта {account_id}:\n"
+                                  f"Прибыль: {profit}\nRR: {rr}\nКоличество сделок: {trades}\nПары: {pairs}")
+    else:
+        update.message.reply_text("Статистика не найдена.")
 
 # Главная функция
 def main():
-    updater = Updater("7398609388:AAHpGPlqH1qW4Hx3SsdyYDtqT0PS7EXy-zs")
-dispatcher = updater.dispatcher  # Замените ВАШ_ТОКЕН на свой токен
+    create_db()  # Создаем базу данных и таблицы
+    updater = Updater("7398609388:AAHpGPlqH1qW4Hx3SsdyYDtqT0PS7EXy-zs", use_context=True)
+    
     dp = updater.dispatcher
 
-    # Диалог с пользователем
-    conversation_handler = ConversationHandler(
-        entry_points=[CommandHandler("start", start)],
-        states={
-            "WAITING_FOR_ACCOUNT_ID": [MessageHandler(Filters.text & ~Filters.command, handle_account_id)],
-            "WAITING_FOR_ACCOUNT_NAME": [MessageHandler(Filters.text & ~Filters.command, handle_account_name)],
-            "WAITING_FOR_ACCOUNT_ID_TO_DELETE": [MessageHandler(Filters.text & ~Filters.command, handle_account_delete)],
-        },
-        fallbacks=[],
-    )
+    dp.add_handler(CommandHandler("start", start))
+    dp.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_text))
 
-    dp.add_handler(conversation_handler)
-    dp.add_handler(MessageHandler(Filters.regex("Менеджмент аккаунтов"), manage_accounts))
-    dp.add_handler(MessageHandler(Filters.regex("Статистика аккаунтов"), show_statistics))
+    dp.add_handler(MessageHandler(Filters.regex('^Менеджмент аккаунтов$'), manage_accounts))
+    dp.add_handler(MessageHandler(Filters.regex('^Статистика$'), statistics))
+    dp.add_handler(MessageHandler(Filters.regex('^Добавить аккаунт$'), add_account))
+    dp.add_handler(MessageHandler(Filters.regex('^Удалить аккаунт$'), delete_account))
+    dp.add_handler(MessageHandler(Filters.regex('^График доходности$'), graph))
+    dp.add_handler(MessageHandler(Filters.regex('^RR$'), rr))
+    dp.add_handler(MessageHandler(Filters.regex('^Количество сделок$'), trades))
+    dp.add_handler(MessageHandler(Filters.regex('^Пары$'), pairs))
 
     updater.start_polling()
     updater.idle()
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
