@@ -120,7 +120,7 @@ def main():
     create_db()  # Создаем базу данных и таблицы
     updater = Updater("7398609388:AAHpGPlqH1qW4Hx3SsdyYDtqT0PS7EXy-zs", use_context=True)
     
-    dp = updater.dispatcher
+    dp = updater.dispatcher  # Обратите внимание на отступ
 
     dp.add_handler(CommandHandler("start", start))
     dp.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_text))
