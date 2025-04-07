@@ -61,49 +61,29 @@ async def delete_trade_handler(update: Update, context: CallbackContext):
 async def view_trades_handler(update: Update, context: CallbackContext):
     trades = get_all_trades()
     if trades:
+        message = "Журнал сделок:\n\n"
         for trade in trades:
-            await update.message.reply_text(f"ID: {trade[0]}\nДата: {trade[1]}\nПара: {trade[2]}\nАккаунт: {trade[3]}\nRR: {trade[4]}\nРиск: {trade[5]}\nРезультат: {trade[6]}")
-        # После отображения сделок, предложим дополнительные действия
-        await update.message.reply_text("Вы можете выбрать одну из следующих опций:\nДобавить сделку, Удалить все сделки, Удалить сделку по ID.")
+            message += f"ID: {trade[0]}\nДата: {trade[1]}\nПара: {trade[2]}\nАккаунт: {trade[3]}\nRR: {trade[4]}\nРиск: {trade[5]}\nРезультат: {trade[6]}\n\n"
+        await update.message.reply_text(message)
     else:
-        await update.message.reply_text("Журнал сделок пуст. Вы можете добавить сделку.")
-        # После того, как журнал пуст, предложим добавить сделку
-        await update.message.reply_text("Нажмите 'Добавить сделку', чтобы добавить новую сделку.")
+        await update.message.reply_text("Журнал сделок пуст.")
 
-# Функция для обработки текста
+# Функция для обработки сообщений пользователя (ввод сделок)
 async def handle_message(update: Update, context: CallbackContext):
     text = update.message.text
-    if text == "Журнал сделок":
-        await update.message.reply_text("Введите информацию по сделке: Инструмент, Вход, Выход и т.д.")
-        # Сохраним состояние ввода, чтобы понимать, что данные сделки нужно сохранить
-        context.user_data['state'] = 'waiting_for_trade_info'
-    elif text == "Торговый план":
-        await update.message.reply_text("Введите торговый план для сегодняшней сессии.")
-    elif text == "Риск-менеджмент":
-        await update.message.reply_text("Введите ваши настройки риск-менеджмента.")
-    elif text == "Психология":
-        await update.message.reply_text("Ответьте на вопросы о своем настроении и эмоциях перед торговлей.")
-    elif text == "Напоминания":
-        await update.message.reply_text("Настройте напоминания для своих торговых сессий.")
-    elif text == "Настройки":
-        await update.message.reply_text("Настройки бота: язык, таймзона и другие параметры.")
+    # Обрабатываем ввод данных о сделке
+    if ',' in text:  # Если есть запятая, значит, пользователь ввел данные
+        try:
+            date, trading_pair, account, rr, risk, result = map(str.strip, text.split(','))
+            rr = float(rr)
+            risk = float(risk)
+            # Сохраняем сделку в базу данных
+            add_trade(date, trading_pair, account, rr, risk, result)
+            await update.message.reply_text("Сделка добавлена!")
+        except Exception as e:
+            await update.message.reply_text(f"Ошибка при добавлении сделки: {e}. Пожалуйста, используйте формат: \nДата, Пара, Аккаунт, RR, Риск, Результат")
     else:
-        # Проверка, если пользователь ожидает данные сделки
-        if 'state' in context.user_data and context.user_data['state'] == 'waiting_for_trade_info':
-            # Разделим введенные данные по запятой
-            try:
-                data = text.split(',')
-                if len(data) == 6:
-                    date, trading_pair, account, rr, risk, result = data
-                    add_trade(date.strip(), trading_pair.strip(), account.strip(), float(rr.strip()), float(risk.strip()), result.strip())
-                    await update.message.reply_text("Сделка добавлена!")
-                    context.user_data['state'] = None  # Сброс состояния
-                else:
-                    await update.message.reply_text("Некорректный формат. Убедитесь, что данные введены в формате: \nДата, Пара, Аккаунт, RR, Риск на сделку, Итог сделки")
-            except Exception as e:
-                await update.message.reply_text(f"Ошибка при обработке данных: {e}")
-        else:
-            await update.message.reply_text("Выберите одну из предложенных опций.")
+        await update.message.reply_text("Неверный формат. Используйте: Дата, Пара, Аккаунт, RR, Риск, Результат")
 
 # Основная функция для запуска бота
 def main():
