@@ -1,12 +1,6 @@
 import sqlite3
-import logging
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
-
-# Настройка логирования
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                    level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 # Создаем подключение к базе данных
 conn = sqlite3.connect('trading_bot.db')
@@ -69,36 +63,24 @@ async def view_trades_handler(update: Update, context: CallbackContext):
     if trades:
         for trade in trades:
             await update.message.reply_text(f"ID: {trade[0]}\nДата: {trade[1]}\nПара: {trade[2]}\nАккаунт: {trade[3]}\nRR: {trade[4]}\nРиск: {trade[5]}\nРезультат: {trade[6]}")
+        # После отображения сделок, предложим дополнительные действия
+        await update.message.reply_text("Вы можете выбрать одну из следующих опций:\nДобавить сделку, Удалить все сделки, Удалить сделку по ID.")
     else:
-        await update.message.reply_text("Журнал сделок пуст.")
-
-# Функция для обработки текста
-async def handle_message(update: Update, context: CallbackContext):
-    text = update.message.text
-    if text == "Журнал сделок":
-        await view_trades_handler(update, context)
-    elif text == "Добавить сделку":
-        await add_trade_handler(update, context)
-    elif text == "Удалить все сделки":
-        await delete_all_trades_handler(update, context)
-    elif text == "Удалить сделку по ID":
-        await delete_trade_handler(update, context)
-    else:
-        await update.message.reply_text("Выберите одну из предложенных опций.")
+        await update.message.reply_text("Журнал сделок пуст. Вы можете добавить сделку.")
+        # После того, как журнал пуст, предложим добавить сделку
+        await update.message.reply_text("Нажмите 'Добавить сделку', чтобы добавить новую сделку.")
 
 # Основная функция для запуска бота
 def main():
-    # Токен твоего бота
-    BOT_TOKEN = "7398609388:AAHpGPlqH1qW4Hx3SsdyYDtqT0PS7EXy-zs"
-    
-    # Создаем объект приложения
-    application = Application.builder().token(BOT_TOKEN).build()
+    application = Application.builder().token("7398609388:AAHpGPlqH1qW4Hx3SsdyYDtqT0PS7EXy-zs").build()
 
-    # Обработчики команд и сообщений
     application.add_handler(CommandHandler("start", start))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    application.add_handler(MessageHandler(filters.Regex('^Добавить сделку$'), add_trade_handler))
+    application.add_handler(MessageHandler(filters.Regex('^Журнал сделок$'), view_trades_handler))
+    application.add_handler(MessageHandler(filters.Regex('^Удалить все сделки$'), delete_all_trades_handler))
+    application.add_handler(MessageHandler(filters.Regex('^Удалить сделку по ID$'), delete_trade_handler))
 
-    # Запуск бота
     application.run_polling()
 
 if __name__ == '__main__':
