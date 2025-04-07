@@ -1,5 +1,5 @@
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
+from telegram.ext import Updater, CommandHandler, CallbackQueryHandler, MessageHandler, filters
 import sqlite3
 
 # Создание базы данных
@@ -78,16 +78,16 @@ def main():
     dp = updater.dispatcher  # Здесь правильный отступ
 
     dp.add_handler(CommandHandler("start", start))
-    dp.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_text))
+    dp.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
 
-    dp.add_handler(MessageHandler(Filters.regex('^Менеджмент аккаунтов$'), manage_accounts))
-    dp.add_handler(MessageHandler(Filters.regex('^Статистика$'), statistics))
-    dp.add_handler(MessageHandler(Filters.regex('^Добавить аккаунт$'), add_account))
-    dp.add_handler(MessageHandler(Filters.regex('^Удалить аккаунт$'), delete_account))
-    dp.add_handler(MessageHandler(Filters.regex('^График доходности$'), graph))
-    dp.add_handler(MessageHandler(Filters.regex('^RR$'), rr))
-    dp.add_handler(MessageHandler(Filters.regex('^Количество сделок$'), trades))
-    dp.add_handler(MessageHandler(Filters.regex('^Пары$'), pairs))
+    dp.add_handler(CallbackQueryHandler(manage_accounts, pattern='^manage_accounts$'))
+    dp.add_handler(CallbackQueryHandler(statistics, pattern='^statistics$'))
+    dp.add_handler(CallbackQueryHandler(add_account, pattern='^add_account$'))
+    dp.add_handler(CallbackQueryHandler(delete_account, pattern='^delete_account$'))
+    dp.add_handler(CallbackQueryHandler(graph, pattern='^graph$'))
+    dp.add_handler(CallbackQueryHandler(rr, pattern='^rr$'))
+    dp.add_handler(CallbackQueryHandler(trades, pattern='^trades$'))
+    dp.add_handler(CallbackQueryHandler(pairs, pattern='^pairs$'))
 
     updater.start_polling()
     updater.idle()
