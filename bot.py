@@ -84,7 +84,7 @@ def show_statistics(update, context):
 
 # Главная функция
 def main():
-    updater = Updater("7398609388:AAHpGPlqH1qW4Hx3SsdyYDtqT0PS7EXy-zs
+    updater = Updater("7398609388:AAHpGPlqH1qW4Hx3SsdyYDtqT0PS7EXy-zs")
 ", use_context=True)  # Замените ВАШ_ТОКЕН на свой токен
     dp = updater.dispatcher
 
