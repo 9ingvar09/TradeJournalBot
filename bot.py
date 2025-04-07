@@ -1,66 +1,55 @@
 import logging
-from telegram import Update
-from telegram.ext import Updater, CommandHandler, CallbackContext, MessageHandler
-from telegram.ext import filters
-import os
-from dotenv import load_dotenv
+from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
 
-# Загружаем переменные из .env
-load_dotenv()
-
-# Устанавливаем логирование
+# Настройка логирования
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Получаем токен из переменной окружения
-BOT_TOKEN = os.getenv("BOT_TOKEN")
+# Токен твоего бота
+BOT_TOKEN = "7398609388:AAHpGPlqH1qW4Hx3SsdyYDtqT0PS7EXy-zs"
 
-# Функция /start, которая будет приветствовать пользователя
-def start(update: Update, context: CallbackContext) -> None:
-    update.message.reply_text(
-        'Привет! Я твой торговый помощник. Команды: /start, /journal, /plan, /risk, /psychology, /reminders.')
+# Функция для обработки команды /start
+async def start(update: Update, context: CallbackContext):
+    # Главное меню
+    keyboard = [
+        [KeyboardButton("Журнал сделок"), KeyboardButton("Торговый план")],
+        [KeyboardButton("Риск-менеджмент"), KeyboardButton("Психология")],
+        [KeyboardButton("Напоминания"), KeyboardButton("Настройки")]
+    ]
+    reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+    await update.message.reply_text("Привет! Я твой трейдинг-бот. Выберите опцию:", reply_markup=reply_markup)
 
-# Функция для команды /journal — Журнал сделок
-def journal(update: Update, context: CallbackContext) -> None:
-    update.message.reply_text('Отправь данные сделки: инструмент, вход, выход, размер позиции, тип сделки.')
+# Функция для обработки текста
+async def handle_message(update: Update, context: CallbackContext):
+    text = update.message.text
+    if text == "Журнал сделок":
+        await update.message.reply_text("Введите информацию по сделке: Инструмент, Вход, Выход и т.д.")
+    elif text == "Торговый план":
+        await update.message.reply_text("Введите торговый план для сегодняшней сессии.")
+    elif text == "Риск-менеджмент":
+        await update.message.reply_text("Введите ваши настройки риск-менеджмента.")
+    elif text == "Психология":
+        await update.message.reply_text("Ответьте на вопросы о своем настроении и эмоциях перед торговлей.")
+    elif text == "Напоминания":
+        await update.message.reply_text("Настройте напоминания для своих торговых сессий.")
+    elif text == "Настройки":
+        await update.message.reply_text("Настройки бота: язык, таймзона и другие параметры.")
+    else:
+        await update.message.reply_text("Выберите одну из предложенных опций.")
 
-# Функция для команды /plan — Торговый план
-def plan(update: Update, context: CallbackContext) -> None:
-    update.message.reply_text('Отправь торговый план на день: инструменты, точки входа, стопы, тейки.')
-
-# Функция для команды /risk — Риск-менеджмент
-def risk(update: Update, context: CallbackContext) -> None:
-    update.message.reply_text('Введите максимальный риск на день и сделку.')
-
-# Функция для команды /psychology — Психологический контроль
-def psychology(update: Update, context: CallbackContext) -> None:
-    update.message.reply_text('Как ты себя чувствуешь перед торговлей? Напиши "спокоен/не спокоен".')
-
-# Функция для команды /reminders — Напоминания
-def reminders(update: Update, context: CallbackContext) -> None:
-    update.message.reply_text('Я буду напоминать тебе: проверяй план, следи за эмоциями, соблюдай лимиты.')
-
-# Основная функция, которая запускает бота
+# Основная функция для запуска бота
 def main():
-    updater = Updater(BOT_TOKEN)
+    # Создаем объект приложения
+    application = Application.builder().token(BOT_TOKEN).build()
 
-    # Получаем диспетчера для регистрации обработчиков
-    dispatcher = updater.dispatcher
-
-    # Регистрация обработчиков команд
-    dispatcher.add_handler(CommandHandler("start", start))
-    dispatcher.add_handler(CommandHandler("journal", journal))
-    dispatcher.add_handler(CommandHandler("plan", plan))
-    dispatcher.add_handler(CommandHandler("risk", risk))
-    dispatcher.add_handler(CommandHandler("psychology", psychology))
-    dispatcher.add_handler(CommandHandler("reminders", reminders))
+    # Обработчики команд и сообщений
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
     # Запуск бота
-    updater.start_polling()
-
-    # Бот будет работать до тех пор, пока не будет остановлен
-    updater.idle()
+    application.run_polling()
 
 if __name__ == '__main__':
     main()
