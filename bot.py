@@ -1,6 +1,6 @@
 import json
 from telegram import ReplyKeyboardMarkup, KeyboardButton
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, ConversationHandler
+from telegram.ext import Updater, CommandHandler, MessageHandler, filters, ConversationHandler
 
 # Функции для работы с базой данных (аккаунты)
 def load_accounts():
