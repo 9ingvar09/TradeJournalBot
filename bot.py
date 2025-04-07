@@ -1,14 +1,19 @@
 import logging
+import os
+from dotenv import load_dotenv
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
+
+# Загрузка переменных из файла .env
+load_dotenv()
 
 # Настройка логирования
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Токен твоего бота
-BOT_TOKEN = "7398609388:AAHpGPlqH1qW4Hx3SsdyYDtqT0PS7EXy-zs"
+# Токен вашего бота, теперь берется из переменной окружения
+BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 
 # Функция для обработки команды /start
 async def start(update: Update, context: CallbackContext):
@@ -40,7 +45,7 @@ async def handle_message(update: Update, context: CallbackContext):
         await update.message.reply_text("Выберите одну из предложенных опций.")
 
 # Основная функция для запуска бота
-def main():
+async def main():
     # Создаем объект приложения
     application = Application.builder().token(BOT_TOKEN).build()
 
@@ -49,7 +54,8 @@ def main():
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
     # Запуск бота
-    application.run_polling()
+    await application.run_polling()
 
 if __name__ == '__main__':
-    main()
+    import asyncio
+    asyncio.run(main())
