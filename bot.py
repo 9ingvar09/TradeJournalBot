@@ -1,96 +1,48 @@
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Updater, CommandHandler, CallbackQueryHandler, MessageHandler, filters
-import sqlite3
+from telegram import Update, Bot
+from telegram.ext import ApplicationBuilder, ContextTypes, MessageHandler, filters
 
-# Создание базы данных
-def create_db():
-    conn = sqlite3.connect('trader_bot.db')
-    c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS accounts (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    account_name TEXT,
-                    account_id INTEGER,
-                    trades INTEGER,
-                    rr REAL,
-                    graph BLOB)''')
-    conn.commit()
-    conn.close()
+# Токен и твой ID
+BOT_TOKEN = "7398609388:AAHpGPlqH1qW4Hx3SsdyYDtqT0PS7EXy-zs"
+OWNER_ID = 861463774
 
-# Обработчик команды /start
-def start(update, context):
-    user = update.message.from_user
-    update.message.reply_text(f'Привет, {user.first_name}! Выберите одну из опций.')
+# Обработчик входящих сообщений
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    message = update.message
 
-    keyboard = [
-        [InlineKeyboardButton("Менеджмент аккаунтов", callback_data='manage_accounts')],
-        [InlineKeyboardButton("Статистика", callback_data='statistics')]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    update.message.reply_text('Что вы хотите сделать?', reply_markup=reply_markup)
+    # Если пишет клиент (не ты)
+    if user.id != OWNER_ID:
+        forward = f"Новое сообщение от @{user.username or 'без ника'} (ID: {user.id}):\n{message.text}"
+        await context.bot.send_message(chat_id=OWNER_ID, text=forward)
+        await context.bot.send_message(chat_id=user.id, text="Спасибо! Мы скоро ответим.")
 
-# Функции для кнопок
-def manage_accounts(update, context):
-    keyboard = [
-        [InlineKeyboardButton("Добавить аккаунт", callback_data='add_account')],
-        [InlineKeyboardButton("Удалить аккаунт", callback_data='delete_account')]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    update.callback_query.message.edit_text('Выберите действие с аккаунтами:', reply_markup=reply_markup)
+    # Если отвечаешь ты как менеджер
+    else:
+        try:
+            # Ожидается: /ответ user_id сообщение
+            if message.text.startswith("/ответ"):
+                parts = message.text.split(" ", 2)
+                if len(parts) >= 3:
+                    target_id = int(parts[1])
+                    reply_text = parts[2]
+                    await context.bot.send_message(chat_id=target_id, text=reply_text)
+                    await context.bot.send_message(chat_id=OWNER_ID, text="Ответ отправлен.")
+                else:
+                    await message.reply_text("Формат: /ответ user_id сообщение")
+            else:
+                await message.reply_text("Для ответа клиенту используй: /ответ user_id сообщение")
+        except Exception as e:
+            await message.reply_text(f"Ошибка: {e}")
 
-def add_account(update, context):
-    update.callback_query.message.edit_text('Введите информацию об аккаунте.')
-    # Здесь можно добавить логику добавления аккаунта в базу данных
+# Запуск бота
+async def main():
+    app = ApplicationBuilder().token(BOT_TOKEN).build()
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    app.add_handler(MessageHandler(filters.COMMAND, handle_message))  # для /ответ
 
-def delete_account(update, context):
-    update.callback_query.message.edit_text('Введите ID аккаунта для удаления.')
-    # Логика удаления аккаунта
-
-def statistics(update, context):
-    keyboard = [
-        [InlineKeyboardButton("График доходности", callback_data='graph')],
-        [InlineKeyboardButton("RR", callback_data='rr')],
-        [InlineKeyboardButton("Количество сделок", callback_data='trades')],
-        [InlineKeyboardButton("Пары", callback_data='pairs')]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    update.callback_query.message.edit_text('Выберите статистику:', reply_markup=reply_markup)
-
-def graph(update, context):
-    update.callback_query.message.edit_text('График доходности.')
-    # Логика отображения графика
-
-def rr(update, context):
-    update.callback_query.message.edit_text('RR.')
-    # Логика отображения RR
-
-def trades(update, context):
-    update.callback_query.message.edit_text('Количество сделок.')
-    # Логика отображения количества сделок
-
-def pairs(update, context):
-    update.callback_query.message.edit_text('Пары.')
-    # Логика отображения пар
-
-def main():
-    create_db()  # Создаем базу данных и таблицы
-    updater = Updater("7398609388:AAHpGPlqH1qW4Hx3SsdyYDtqT0PS7EXy-zs", use_context=True)
-    
-    dp = updater.dispatcher  # Здесь правильный отступ
-
-    dp.add_handler(CommandHandler("start", start))
-    dp.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
-
-    dp.add_handler(CallbackQueryHandler(manage_accounts, pattern='^manage_accounts$'))
-    dp.add_handler(CallbackQueryHandler(statistics, pattern='^statistics$'))
-    dp.add_handler(CallbackQueryHandler(add_account, pattern='^add_account$'))
-    dp.add_handler(CallbackQueryHandler(delete_account, pattern='^delete_account$'))
-    dp.add_handler(CallbackQueryHandler(graph, pattern='^graph$'))
-    dp.add_handler(CallbackQueryHandler(rr, pattern='^rr$'))
-    dp.add_handler(CallbackQueryHandler(trades, pattern='^trades$'))
-    dp.add_handler(CallbackQueryHandler(pairs, pattern='^pairs$'))
-
-    updater.start_polling()
-    updater.idle()
+    print("Бот запущен...")
+    await app.run_polling()
 
 if __name__ == "__main__":
-    main()
+    import asyncio
+    asyncio.run(main())
