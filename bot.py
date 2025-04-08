@@ -90,8 +90,7 @@ async def history_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def main():
     init_db()  # Инициализация базы данных
 
-    app = ApplicationBuilder().token("7398609388:AAHpGPlqH1qW4Hx3SsdyYDtqT0PS7EXy-zs
-").build()
+    app = ApplicationBuilder().token("7398609388:AAHpGPlqH1qW4Hx3SsdyYDtqT0PS7EXy-zs").build()
 
     # Обработчики сообщений и команд
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_user_message))
