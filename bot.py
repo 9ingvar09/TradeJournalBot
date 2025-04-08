@@ -1,48 +1,42 @@
 from telegram import Update, Bot
 from telegram.ext import ApplicationBuilder, ContextTypes, MessageHandler, filters
 
-# Токен и твой ID
 BOT_TOKEN = "7398609388:AAHpGPlqH1qW4Hx3SsdyYDtqT0PS7EXy-zs"
 OWNER_ID = 861463774
 
-# Обработчик входящих сообщений
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     message = update.message
 
-    # Если пишет клиент (не ты)
     if user.id != OWNER_ID:
         forward = f"Новое сообщение от @{user.username or 'без ника'} (ID: {user.id}):\n{message.text}"
         await context.bot.send_message(chat_id=OWNER_ID, text=forward)
         await context.bot.send_message(chat_id=user.id, text="Спасибо! Мы скоро ответим.")
-
-    # Если отвечаешь ты как менеджер
     else:
-        try:
-            # Ожидается: /ответ user_id сообщение
-            if message.text.startswith("/ответ"):
-                parts = message.text.split(" ", 2)
-                if len(parts) >= 3:
-                    target_id = int(parts[1])
-                    reply_text = parts[2]
-                    await context.bot.send_message(chat_id=target_id, text=reply_text)
-                    await context.bot.send_message(chat_id=OWNER_ID, text="Ответ отправлен.")
-                else:
-                    await message.reply_text("Формат: /ответ user_id сообщение")
+        if message.text.startswith("/ответ"):
+            parts = message.text.split(" ", 2)
+            if len(parts) >= 3:
+                target_id = int(parts[1])
+                reply_text = parts[2]
+                await context.bot.send_message(chat_id=target_id, text=reply_text)
+                await context.bot.send_message(chat_id=OWNER_ID, text="Ответ отправлен.")
             else:
-                await message.reply_text("Для ответа клиенту используй: /ответ user_id сообщение")
-        except Exception as e:
-            await message.reply_text(f"Ошибка: {e}")
+                await message.reply_text("Формат: /ответ user_id сообщение")
+        else:
+            await message.reply_text("Для ответа клиенту используй: /ответ user_id сообщение")
 
-# Запуск бота
 async def main():
     app = ApplicationBuilder().token(BOT_TOKEN).build()
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    app.add_handler(MessageHandler(filters.COMMAND, handle_message))  # для /ответ
-
+    app.add_handler(MessageHandler(filters.COMMAND, handle_message))
     print("Бот запущен...")
     await app.run_polling()
 
+# Для запуска на Render/в вебе
 if __name__ == "__main__":
     import asyncio
-    asyncio.run(main())
+
+    try:
+        asyncio.get_running_loop().create_task(main())
+    except RuntimeError:
+        asyncio.run(main())
